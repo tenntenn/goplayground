@@ -22,8 +22,9 @@ func main() {
 	cmdname := strings.Join(os.Args[:1], " ")
 	fset := flag.NewFlagSet(cmdname, flag.ExitOnError)
 
-	var asJSON, imports bool
+	fset.Usage = usage
 
+	var asJSON, imports bool
 	fset.BoolVar(&asJSON, "json", false, "output as JSON for run or format")
 	fset.BoolVar(&imports, "imports", false, "use goimports for format")
 	fset.Parse(os.Args[2:])
@@ -44,10 +45,11 @@ func main() {
 			fmt.Fprintln(os.Stderr, "Error:", err)
 			os.Exit(1)
 		}
-	case "help":
-		fset.Usage()
+	case "-h", "help":
+		help(fset.Arg(0))
 	default:
 		fmt.Fprintln(os.Stderr, "does not support subcomand", os.Args[1])
+		fset.Usage()
 		os.Exit(1)
 	}
 }
@@ -148,4 +150,17 @@ func share(path string) error {
 	fmt.Println(shareURL)
 
 	return nil
+}
+
+func help(cmd string) {
+	switch cmd {
+	case "run":
+		usageRun()
+	case "format":
+		usageFormat()
+	case "share":
+		usageShare()
+	default:
+		usage()
+	}
 }
