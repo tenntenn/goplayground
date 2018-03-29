@@ -25,7 +25,7 @@ $ goplayground run main.go
 ### Format
 
 ```
-$ goplayground run [-imports] main.go
+$ goplayground fomrat [-imports] main.go
 ```
 
 ### Share
