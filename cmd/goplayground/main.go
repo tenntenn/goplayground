@@ -15,7 +15,7 @@ import (
 
 func main() {
 	if len(os.Args) < 2 {
-		fmt.Fprintln(os.Stderr, "subcomand (run/share/format) should be given")
+		fmt.Fprintln(os.Stderr, "subcomand (run/share/format/help) should be given")
 		os.Exit(1)
 	}
 
@@ -44,6 +44,8 @@ func main() {
 			fmt.Fprintln(os.Stderr, "Error:", err)
 			os.Exit(1)
 		}
+	case "help":
+		fset.Usage()
 	default:
 		fmt.Fprintln(os.Stderr, "does not support subcomand", os.Args[1])
 		os.Exit(1)
