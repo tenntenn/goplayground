@@ -16,6 +16,24 @@ $ go get github.com/tenntenn/goplayground/cmd/goplayground
 $ goplayground help
 ```
 
+### Run
+
+```
+$ goplayground run main.go
+```
+
+### Format
+
+```
+$ goplayground run [-imports] main.go
+```
+
+### Share
+
+```
+$ goplayground share main.go
+```
+
 ## Use as a libary
 
 See: https://godoc.org/github.com/tenntenn/goplayground
