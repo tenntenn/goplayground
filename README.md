@@ -7,31 +7,31 @@ This is a client of [Go Playground](https://play.golang.org).
 ### Install
 
 ```
-$ go get github.com/tenntenn/goplayground/cmd/goplayground
+$ go get github.com/tenntenn/goplayground/cmd/gp
 ```
 
 ### Usage
 
 ```
-$ goplayground help
+$ gp help
 ```
 
 ### Run
 
 ```
-$ goplayground run main.go
+$ gp run main.go
 ```
 
 ### Format
 
 ```
-$ goplayground fomrat [-imports] main.go
+$ gp fomrat [-imports] main.go
 ```
 
 ### Share
 
 ```
-$ goplayground share main.go
+$ gp share main.go
 ```
 
 ## Use as a libary
