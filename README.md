@@ -34,6 +34,16 @@ $ gp fomrat [-imports] main.go
 $ gp share main.go
 ```
 
+### Download
+
+```
+$ gp download https://play.golang.org/p/sTkdodLtokQ
+```
+
+```
+$ gp dl https://play.golang.org/p/sTkdodLtokQ
+```
+
 ## Use as a libary
 
 See: https://godoc.org/github.com/tenntenn/goplayground
