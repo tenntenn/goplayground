@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"strings"
 	"time"
@@ -42,6 +43,17 @@ func main() {
 		}
 	case "share":
 		if err := share(fset.Arg(0)); err != nil {
+			fmt.Fprintln(os.Stderr, "Error:", err)
+			os.Exit(1)
+		}
+	case "dl", "download":
+		var r io.Reader
+		if fset.NArg() <= 0 {
+			r = os.Stdin
+		} else {
+			r = strings.NewReader(fset.Arg(0))
+		}
+		if err := download(r); err != nil {
 			fmt.Fprintln(os.Stderr, "Error:", err)
 			os.Exit(1)
 		}
@@ -152,6 +164,20 @@ func share(path string) error {
 	return nil
 }
 
+func download(r io.Reader) error {
+	b, err := ioutil.ReadAll(r)
+	if err != nil {
+		return errors.Wrap(err, "download is failed")
+	}
+
+	hashOrURL := strings.TrimSpace(string(b))
+	var cli goplayground.Client
+	if err := cli.Download(os.Stdout, hashOrURL); err != nil {
+		return errors.Wrap(err, "download is failed")
+	}
+	return nil
+}
+
 func help(cmd string) {
 	switch cmd {
 	case "run":
@@ -160,6 +186,8 @@ func help(cmd string) {
 		usageFormat()
 	case "share":
 		usageShare()
+	case "download":
+		usageDownload()
 	default:
 		usage()
 	}
