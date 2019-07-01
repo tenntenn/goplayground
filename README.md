@@ -22,16 +22,40 @@ $ gp help
 $ gp run main.go
 ```
 
+```
+$ gp run a.go b.go
+```
+
+```
+$ find . -type f | xargs gp run
+```
+
 ### Format
 
 ```
 $ gp fomrat [-imports] main.go
 ```
 
+```
+$ gp format a.go b.go
+```
+
+```
+$ find . -type f | xargs gp format
+```
+
 ### Share
 
 ```
 $ gp share main.go
+```
+
+```
+$ gp share a.go b.go
+```
+
+```
+$ find . -type f | xargs gp share
 ```
 
 ### Download
