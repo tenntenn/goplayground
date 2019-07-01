@@ -8,6 +8,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -28,9 +29,13 @@ func main() {
 
 	fset.Usage = usage
 
-	var asJSON, imports bool
+	var (
+		asJSON, imports bool
+		dldir           string
+	)
 	fset.BoolVar(&asJSON, "json", false, "output as JSON for run or format")
 	fset.BoolVar(&imports, "imports", false, "use goimports for format")
+	fset.StringVar(&dldir, "dldir", "", "output directory for download")
 	fset.Parse(os.Args[2:])
 
 	switch os.Args[1] {
@@ -50,16 +55,53 @@ func main() {
 			os.Exit(1)
 		}
 	case "dl", "download":
-		var r io.Reader
+		var hashOrURL string
 		if fset.NArg() <= 0 {
-			r = os.Stdin
+			s, err := toHashOrURL(os.Stdin)
+			if err != nil {
+				fmt.Fprintln(os.Stderr, "Error:", err)
+				os.Exit(1)
+			}
+			hashOrURL = s
 		} else {
-			r = strings.NewReader(fset.Arg(0))
+			hashOrURL = fset.Arg(0)
 		}
-		if err := download(r); err != nil {
+
+		var buf bytes.Buffer
+		if err := download(&buf, hashOrURL); err != nil {
 			fmt.Fprintln(os.Stderr, "Error:", err)
 			os.Exit(1)
 		}
+
+		if dldir == "" {
+			if _, err := io.Copy(os.Stdout, &buf); err != nil {
+				fmt.Fprintln(os.Stderr, "Error:", err)
+				os.Exit(1)
+			}
+		}
+
+		data := buf.Bytes()
+		a := txtar.Parse(data)
+		if len(a.Files) == 0 {
+			fname := path.Base(hashOrURL)
+			fname = fname[:len(fname)-len(filepath.Ext(fname))] + ".go"
+			f, err := os.Create(filepath.Join(dldir, fname))
+			if err != nil {
+				fmt.Fprintln(os.Stderr, "Error:", err)
+				os.Exit(1)
+			}
+
+			if _, err := io.Copy(f, bytes.NewReader(data)); err != nil {
+				fmt.Fprintln(os.Stderr, "Error:", err)
+				os.Exit(1)
+			}
+		}
+
+		if err := txtar.Write(a, dldir); err != nil {
+			fmt.Fprintln(os.Stderr, "Error:", err)
+			os.Exit(1)
+		}
+
 	case "-h", "help":
 		help(fset.Arg(0))
 	default:
@@ -83,13 +125,13 @@ func toReader(paths ...string) (io.Reader, error) {
 	}
 
 	var a txtar.Archive
-	for _, path := range paths {
-		data, err := ioutil.ReadFile(path)
+	for _, p := range paths {
+		data, err := ioutil.ReadFile(p)
 		if err != nil {
-			return nil, errors.Wrapf(err, "cannot read file", path)
+			return nil, errors.Wrapf(err, "cannot read file", p)
 		}
 		a.Files = append(a.Files, txtar.File{
-			Name: filepath.Clean(path),
+			Name: filepath.Clean(p),
 			Data: data,
 		})
 	}
@@ -180,15 +222,17 @@ func share(paths ...string) error {
 	return nil
 }
 
-func download(r io.Reader) error {
+func toHashOrURL(r io.Reader) (string, error) {
 	b, err := ioutil.ReadAll(r)
 	if err != nil {
-		return errors.Wrap(err, "download is failed")
+		return "", errors.Wrap(err, "cannot read hash or URL")
 	}
+	return strings.TrimSpace(string(b)), nil
+}
 
-	hashOrURL := strings.TrimSpace(string(b))
+func download(w io.Writer, hashOrURL string) error {
 	var cli goplayground.Client
-	if err := cli.Download(os.Stdout, hashOrURL); err != nil {
+	if err := cli.Download(w, hashOrURL); err != nil {
 		return errors.Wrap(err, "download is failed")
 	}
 	return nil
