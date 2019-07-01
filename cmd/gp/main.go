@@ -1,16 +1,19 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/rogpeppe/go-internal/txtar"
 	"github.com/tenntenn/goplayground"
 )
 
@@ -32,17 +35,17 @@ func main() {
 
 	switch os.Args[1] {
 	case "run":
-		if err := run(asJSON, fset.Arg(0)); err != nil {
+		if err := run(asJSON, fset.Args()...); err != nil {
 			fmt.Fprintln(os.Stderr, "Error:", err)
 			os.Exit(1)
 		}
 	case "fmt", "format":
-		if err := format(asJSON, imports, fset.Arg(0)); err != nil {
+		if err := format(asJSON, imports, fset.Args()...); err != nil {
 			fmt.Fprintln(os.Stderr, "Error:", err)
 			os.Exit(1)
 		}
 	case "share":
-		if err := share(fset.Arg(0)); err != nil {
+		if err := share(fset.Args()...); err != nil {
 			fmt.Fprintln(os.Stderr, "Error:", err)
 			os.Exit(1)
 		}
@@ -66,25 +69,39 @@ func main() {
 	}
 }
 
-func toReader(path string) (io.Reader, func() error, error) {
-	if path == "" {
-		return os.Stdin, func() error { return nil }, nil
+func toReader(paths ...string) (io.Reader, error) {
+	if len(paths) == 0 {
+		return os.Stdin, nil
 	}
 
-	f, err := os.Open(path)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "cannot open given file")
+	if len(paths) == 1 {
+		data, err := ioutil.ReadFile(paths[0])
+		if err != nil {
+			return nil, errors.Wrapf(err, "cannot read file", paths[0])
+		}
+		return bytes.NewReader(data), nil
 	}
 
-	return f, f.Close, nil
+	var a txtar.Archive
+	for _, path := range paths {
+		data, err := ioutil.ReadFile(path)
+		if err != nil {
+			return nil, errors.Wrapf(err, "cannot read file", path)
+		}
+		a.Files = append(a.Files, txtar.File{
+			Name: filepath.Clean(path),
+			Data: data,
+		})
+	}
+
+	return bytes.NewReader(txtar.Format(&a)), nil
 }
 
-func run(asJSON bool, path string) error {
-	src, closeFunc, err := toReader(path)
+func run(asJSON bool, paths ...string) error {
+	src, err := toReader(paths...)
 	if err != nil {
 		return err
 	}
-	defer closeFunc()
 
 	var cli goplayground.Client
 	r, err := cli.Run(src)
@@ -117,12 +134,11 @@ func run(asJSON bool, path string) error {
 	return nil
 }
 
-func format(asJSON, imports bool, path string) error {
-	src, closeFunc, err := toReader(path)
+func format(asJSON, imports bool, paths ...string) error {
+	src, err := toReader(paths...)
 	if err != nil {
 		return err
 	}
-	defer closeFunc()
 
 	var cli goplayground.Client
 	r, err := cli.Format(src, imports)
@@ -146,12 +162,12 @@ func format(asJSON, imports bool, path string) error {
 	return nil
 }
 
-func share(path string) error {
-	src, closeFunc, err := toReader(path)
+func share(paths ...string) error {
+
+	src, err := toReader(paths...)
 	if err != nil {
 		return err
 	}
-	defer closeFunc()
 
 	var cli goplayground.Client
 	shareURL, err := cli.Share(src)
