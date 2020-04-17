@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pkg/browser"
 	"github.com/pkg/errors"
 	"github.com/rogpeppe/go-internal/txtar"
 	"github.com/tenntenn/goplayground"
@@ -30,11 +31,12 @@ func main() {
 	fset.Usage = usage
 
 	var (
-		asJSON, imports bool
-		dldir           string
+		asJSON, imports, open bool
+		dldir                 string
 	)
 	fset.BoolVar(&asJSON, "json", false, "output as JSON for run or format")
 	fset.BoolVar(&imports, "imports", false, "use goimports for format")
+	fset.BoolVar(&open, "open", false, "open url in browser for share")
 	fset.StringVar(&dldir, "dldir", "", "output directory for download")
 	fset.Parse(os.Args[2:])
 
@@ -50,7 +52,7 @@ func main() {
 			os.Exit(1)
 		}
 	case "share":
-		if err := share(fset.Args()...); err != nil {
+		if err := share(open, fset.Args()...); err != nil {
 			fmt.Fprintln(os.Stderr, "Error:", err)
 			os.Exit(1)
 		}
@@ -204,7 +206,7 @@ func format(asJSON, imports bool, paths ...string) error {
 	return nil
 }
 
-func share(paths ...string) error {
+func share(open bool, paths ...string) error {
 
 	src, err := toReader(paths...)
 	if err != nil {
@@ -215,6 +217,12 @@ func share(paths ...string) error {
 	shareURL, err := cli.Share(src)
 	if err != nil {
 		return errors.Wrap(err, "share is failed")
+	}
+
+	if open {
+		if err = browser.OpenURL(shareURL.String()); err != nil {
+			return err
+		}
 	}
 
 	fmt.Println(shareURL)
