@@ -43,7 +43,10 @@ func usageShare() {
 	fmt.Println(`usage: goplayground share [gofile]
 
 "share" generates share URL on Go Playground.
-If [gofile] is not specify, it compiles and runs from stdin.`)
+If [gofile] is not specify, it compiles and runs from stdin.
+
+The flags are:
+	-open	open url in browser for share`)
 }
 
 func usageDownload() {
