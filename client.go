@@ -12,6 +12,8 @@ import (
 const (
 	// BaseURL is the default base URL of Go Playground.
 	BaseURL = "https://play.golang.org"
+	// Go2GoBaseURL is the base URL of go2goplay.golang.org.
+	Go2GoBaseURL = "https://go2goplay.golang.org"
 	// Version is version of using Go Playground.
 	Version = "2"
 )
