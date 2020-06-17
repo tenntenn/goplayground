@@ -31,28 +31,39 @@ func main() {
 	fset.Usage = usage
 
 	var (
-		asJSON, imports, open bool
-		dldir                 string
+		go2go, asJSON, imports, open bool
+		dldir                        string
 	)
+	fset.BoolVar(&go2go, "go2", false, "use go2goplay.golang.org")
 	fset.BoolVar(&asJSON, "json", false, "output as JSON for run or format")
 	fset.BoolVar(&imports, "imports", false, "use goimports for format")
 	fset.BoolVar(&open, "open", false, "open url in browser for share")
 	fset.StringVar(&dldir, "dldir", "", "output directory for download")
 	fset.Parse(os.Args[2:])
 
+	p := &playground{
+		asJSON: asJSON,
+		imports: imports,
+		open: open,
+	}
+
+	if go2go {
+		p.cli.BaseURL = goplayground.Go2GoBaseURL
+	}
+
 	switch os.Args[1] {
 	case "run":
-		if err := run(asJSON, fset.Args()...); err != nil {
+		if err := p.run(fset.Args()...); err != nil {
 			fmt.Fprintln(os.Stderr, "Error:", err)
 			os.Exit(1)
 		}
 	case "fmt", "format":
-		if err := format(asJSON, imports, fset.Args()...); err != nil {
+		if err := p.format(fset.Args()...); err != nil {
 			fmt.Fprintln(os.Stderr, "Error:", err)
 			os.Exit(1)
 		}
 	case "share":
-		if err := share(open, fset.Args()...); err != nil {
+		if err := p.share(fset.Args()...); err != nil {
 			fmt.Fprintln(os.Stderr, "Error:", err)
 			os.Exit(1)
 		}
@@ -70,7 +81,7 @@ func main() {
 		}
 
 		var buf bytes.Buffer
-		if err := download(&buf, hashOrURL); err != nil {
+		if err := p.download(&buf, hashOrURL); err != nil {
 			fmt.Fprintln(os.Stderr, "Error:", err)
 			os.Exit(1)
 		}
@@ -141,19 +152,25 @@ func toReader(paths ...string) (io.Reader, error) {
 	return bytes.NewReader(txtar.Format(&a)), nil
 }
 
-func run(asJSON bool, paths ...string) error {
+type playground struct {
+	cli     goplayground.Client
+	asJSON  bool
+	imports bool
+	open    bool
+}
+
+func (p *playground) run(paths ...string) error {
 	src, err := toReader(paths...)
 	if err != nil {
 		return err
 	}
 
-	var cli goplayground.Client
-	r, err := cli.Run(src)
+	r, err := p.cli.Run(src)
 	if err != nil {
 		return errors.Wrap(err, "run is failed")
 	}
 
-	if asJSON {
+	if p.asJSON {
 		if err := json.NewEncoder(os.Stdout).Encode(r); err != nil {
 			return errors.Wrap(err, "result of run cannot encode as JSON")
 		}
@@ -178,19 +195,18 @@ func run(asJSON bool, paths ...string) error {
 	return nil
 }
 
-func format(asJSON, imports bool, paths ...string) error {
+func (p *playground) format(paths ...string) error {
 	src, err := toReader(paths...)
 	if err != nil {
 		return err
 	}
 
-	var cli goplayground.Client
-	r, err := cli.Format(src, imports)
+	r, err := p.cli.Format(src, p.imports)
 	if err != nil {
 		return errors.Wrap(err, "format is failed")
 	}
 
-	if asJSON {
+	if p.asJSON {
 		if err := json.NewEncoder(os.Stdout).Encode(r); err != nil {
 			return errors.Wrap(err, "result of format cannot encode as JSON")
 		}
@@ -206,20 +222,19 @@ func format(asJSON, imports bool, paths ...string) error {
 	return nil
 }
 
-func share(open bool, paths ...string) error {
+func (p *playground) share(paths ...string) error {
 
 	src, err := toReader(paths...)
 	if err != nil {
 		return err
 	}
 
-	var cli goplayground.Client
-	shareURL, err := cli.Share(src)
+	shareURL, err := p.cli.Share(src)
 	if err != nil {
 		return errors.Wrap(err, "share is failed")
 	}
 
-	if open {
+	if p.open {
 		if err = browser.OpenURL(shareURL.String()); err != nil {
 			return err
 		}
@@ -238,9 +253,8 @@ func toHashOrURL(r io.Reader) (string, error) {
 	return strings.TrimSpace(string(b)), nil
 }
 
-func download(w io.Writer, hashOrURL string) error {
-	var cli goplayground.Client
-	if err := cli.Download(w, hashOrURL); err != nil {
+func (p *playground) download(w io.Writer, hashOrURL string) error {
+	if err := p.cli.Download(w, hashOrURL); err != nil {
 		return errors.Wrap(err, "download is failed")
 	}
 	return nil
