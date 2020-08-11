@@ -91,6 +91,7 @@ func main() {
 				fmt.Fprintln(os.Stderr, "Error:", err)
 				os.Exit(1)
 			}
+			return
 		}
 
 		data := buf.Bytes()
