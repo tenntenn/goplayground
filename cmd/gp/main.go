@@ -32,19 +32,21 @@ func main() {
 
 	var (
 		go2go, asJSON, imports, open bool
-		dldir                        string
+		dldir, outputpath            string
 	)
 	fset.BoolVar(&go2go, "go2", false, "use go2goplay.golang.org")
 	fset.BoolVar(&asJSON, "json", false, "output as JSON for run or format")
 	fset.BoolVar(&imports, "imports", false, "use goimports for format")
 	fset.BoolVar(&open, "open", false, "open url in browser for share")
 	fset.StringVar(&dldir, "dldir", "", "output directory for download")
+	fset.StringVar(&outputpath, "output", "", "output file path for format")
 	fset.Parse(os.Args[2:])
 
 	p := &playground{
 		asJSON: asJSON,
 		imports: imports,
 		open: open,
+		path: outputpath,
 	}
 
 	if go2go {
@@ -158,6 +160,7 @@ type playground struct {
 	asJSON  bool
 	imports bool
 	open    bool
+	path    string
 }
 
 func (p *playground) run(paths ...string) error {
@@ -216,10 +219,15 @@ func (p *playground) format(paths ...string) error {
 
 	if r.Error != "" {
 		fmt.Fprintln(os.Stderr, r.Error)
-	} else {
-		fmt.Println(r.Body)
+		return nil
 	}
 
+	if p.path != "" {
+		if err := ioutil.WriteFile(p.path, []byte(r.Body), os.ModePerm); err != nil {
+			return errors.Wrap(err, "failed to write file")
+		}
+	}
+	fmt.Println(r.Body)
 	return nil
 }
 
