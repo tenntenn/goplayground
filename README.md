@@ -7,7 +7,7 @@ This is a client of [Go Playground](https://play.golang.org).
 ### Install
 
 ```
-$ go get github.com/tenntenn/goplayground/cmd/gp
+$ go install github.com/tenntenn/goplayground/cmd/gp@latest
 ```
 
 ### Usage
