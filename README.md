@@ -87,4 +87,4 @@ $ gp download -go2 hYtdQPeKUC3
 
 ## Use as a libary
 
-See: https://godoc.org/github.com/tenntenn/goplayground
+See: https://pkg.go.dev/github.com/tenntenn/goplayground
