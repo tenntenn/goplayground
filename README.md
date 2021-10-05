@@ -33,7 +33,11 @@ $ find . -type f | xargs gp run
 ### Format
 
 ```
-$ gp fomrat [-imports] main.go
+$ gp format [-imports] main.go
+```
+
+```
+$ gp format [-imports] -output main.go main.go
 ```
 
 ```
