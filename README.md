@@ -72,7 +72,7 @@ $ gp dl https://play.golang.org/p/sTkdodLtokQ
 $ gp dl -dldir=output https://play.golang.org/p/sTkdodLtokQ
 ```
 
-## Try generics codes with go2goplay.golang.org
+## Try generics codes with gotipplay.golang.org
 
 ```
 $ gp format -go2 example.go2

@@ -34,7 +34,7 @@ func main() {
 		go2go, asJSON, imports, open bool
 		dldir, outputpath            string
 	)
-	fset.BoolVar(&go2go, "go2", false, "use go2goplay.golang.org")
+	fset.BoolVar(&go2go, "go2", false, "use "+goplayground.Go2BaseURL)
 	fset.BoolVar(&asJSON, "json", false, "output as JSON for run or format")
 	fset.BoolVar(&imports, "imports", false, "use goimports for format")
 	fset.BoolVar(&open, "open", false, "open url in browser for share")
@@ -50,7 +50,7 @@ func main() {
 	}
 
 	if go2go {
-		p.cli.BaseURL = goplayground.Go2GoBaseURL
+		p.cli.BaseURL = goplayground.Go2BaseURL
 	}
 
 	switch os.Args[1] {
