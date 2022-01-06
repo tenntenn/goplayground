@@ -88,6 +88,24 @@ $ gp dl https://play.golang.org/p/sTkdodLtokQ
 $ gp dl -dldir=output https://go.dev/play/p/sTkdodLtokQ
 ```
 
+## Version
+
+`version` prints Go version of playground.
+
+```
+$ gp version
+Version: go1.17.5
+Release: go1.17
+Name: Go 1.17
+```
+
+```
+$ gp version -backend gotip
+Version: devel go1.18-2c58bb2e42 Wed Jan 5 09:50:29 2022 +0000
+Release: go1.18
+Name: Go dev branch
+```
+
 ## With Go dev branch
 
 ```
