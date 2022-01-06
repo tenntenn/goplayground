@@ -58,7 +58,7 @@ func main() {
 
 	if go2go {
 		fmt.Fprintln(os.Stderr, "The option -go2 is deprecated.")
-		fmt.Fprintln(os.Stderr, "Please use -v=gotip instead of it.")
+		fmt.Fprintln(os.Stderr, "Please use -backend=gotip instead of it.")
 		os.Exit(1)
 	}
 
