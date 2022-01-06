@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
+	"path"
 	"strings"
 )
 
@@ -34,13 +36,19 @@ func (cli *Client) Download(w io.Writer, hashOrURL string) error {
 }
 
 func (cli *Client) createDownloadURL(hashOrURL string) string {
-	baseURL := cli.baseURL() + "/p/"
 	switch {
-	case strings.HasPrefix(hashOrURL, baseURL):
-		// URL
+	case strings.HasPrefix(hashOrURL, cli.baseURL()+"/p/"):
 		return hashOrURL + ".go"
-	default:
-		// hash
-		return baseURL + hashOrURL + ".go"
+	case strings.HasPrefix(hashOrURL, cli.frontBaseURL()+"/p/"):
+		dlURL, err := url.Parse(hashOrURL)
+		if err == nil {
+			hash := path.Base(dlURL.Path)
+			if !strings.HasSuffix(hash, ".go") {
+				hash += ".go"
+			}
+			return cli.baseURL() + "/p/" + hash
+		}
 	}
+	// hash
+	return cli.baseURL() + "/p/" + hashOrURL + ".go"
 }

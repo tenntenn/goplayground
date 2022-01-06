@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net/url"
 	"os"
 	"path"
 	"path/filepath"
@@ -14,14 +15,13 @@ import (
 	"time"
 
 	"github.com/pkg/browser"
-	"github.com/pkg/errors"
-	"github.com/rogpeppe/go-internal/txtar"
 	"github.com/tenntenn/goplayground"
+	"golang.org/x/tools/txtar"
 )
 
 func main() {
 	if len(os.Args) < 2 {
-		fmt.Fprintln(os.Stderr, "subcomand (run/share/format/help) should be given")
+		fmt.Fprintln(os.Stderr, "subcomand (run/share/format/version/help) should be given")
 		os.Exit(1)
 	}
 
@@ -32,25 +32,34 @@ func main() {
 
 	var (
 		go2go, asJSON, imports, open bool
-		dldir, outputpath            string
+		dldir                        string
+		backend                      goplayground.Backend
+		outputpath                   string
 	)
-	fset.BoolVar(&go2go, "go2", false, "use go2goplay.golang.org")
+	fset.BoolVar(&go2go, "go2", false, "Deprecated: use go2goplay.golang.org")
 	fset.BoolVar(&asJSON, "json", false, "output as JSON for run or format")
 	fset.BoolVar(&imports, "imports", false, "use goimports for format")
 	fset.BoolVar(&open, "open", false, "open url in browser for share")
 	fset.StringVar(&dldir, "dldir", "", "output directory for download")
+	fset.Var(&backend, "backend", `go version: empty is release version and "gotip" is the developer branch`)
 	fset.StringVar(&outputpath, "output", "", "output file path for format")
 	fset.Parse(os.Args[2:])
 
 	p := &playground{
-		asJSON: asJSON,
+		cli: &goplayground.Client{
+			Backend: backend,
+		},
+		asJSON:  asJSON,
 		imports: imports,
-		open: open,
-		path: outputpath,
+		open:    open,
+		dldir:   dldir,
+		path:    outputpath,
 	}
 
 	if go2go {
-		p.cli.BaseURL = goplayground.Go2GoBaseURL
+		fmt.Fprintln(os.Stderr, "The option -go2 is deprecated.")
+		fmt.Fprintln(os.Stderr, "Please use -v=gotip instead of it.")
+		os.Exit(1)
 	}
 
 	switch os.Args[1] {
@@ -70,54 +79,15 @@ func main() {
 			os.Exit(1)
 		}
 	case "dl", "download":
-		var hashOrURL string
-		if fset.NArg() <= 0 {
-			s, err := toHashOrURL(os.Stdin)
-			if err != nil {
-				fmt.Fprintln(os.Stderr, "Error:", err)
-				os.Exit(1)
-			}
-			hashOrURL = s
-		} else {
-			hashOrURL = fset.Arg(0)
-		}
-
-		var buf bytes.Buffer
-		if err := p.download(&buf, hashOrURL); err != nil {
+		if err := p.download(fset.Args()); err != nil {
 			fmt.Fprintln(os.Stderr, "Error:", err)
 			os.Exit(1)
 		}
-
-		if dldir == "" {
-			if _, err := io.Copy(os.Stdout, &buf); err != nil {
-				fmt.Fprintln(os.Stderr, "Error:", err)
-				os.Exit(1)
-			}
-			return
-		}
-
-		data := buf.Bytes()
-		a := txtar.Parse(data)
-		if len(a.Files) == 0 {
-			fname := path.Base(hashOrURL)
-			fname = fname[:len(fname)-len(filepath.Ext(fname))] + ".go"
-			f, err := os.Create(filepath.Join(dldir, fname))
-			if err != nil {
-				fmt.Fprintln(os.Stderr, "Error:", err)
-				os.Exit(1)
-			}
-
-			if _, err := io.Copy(f, bytes.NewReader(data)); err != nil {
-				fmt.Fprintln(os.Stderr, "Error:", err)
-				os.Exit(1)
-			}
-		}
-
-		if err := txtar.Write(a, dldir); err != nil {
+	case "version":
+		if err := p.version(); err != nil {
 			fmt.Fprintln(os.Stderr, "Error:", err)
 			os.Exit(1)
 		}
-
 	case "-h", "help":
 		help(fset.Arg(0))
 	default:
@@ -135,7 +105,7 @@ func toReader(paths ...string) (io.Reader, error) {
 	if len(paths) == 1 {
 		data, err := ioutil.ReadFile(paths[0])
 		if err != nil {
-			return nil, errors.Wrapf(err, "cannot read file", paths[0])
+			return nil, fmt.Errorf("cannot read file (%s): %w", paths[0], err)
 		}
 		return bytes.NewReader(data), nil
 	}
@@ -144,10 +114,10 @@ func toReader(paths ...string) (io.Reader, error) {
 	for _, p := range paths {
 		data, err := ioutil.ReadFile(p)
 		if err != nil {
-			return nil, errors.Wrapf(err, "cannot read file", p)
+			return nil, fmt.Errorf("cannot read file (%s): %w", p, err)
 		}
 		a.Files = append(a.Files, txtar.File{
-			Name: filepath.Clean(p),
+			Name: filepath.ToSlash(filepath.Clean(p)),
 			Data: data,
 		})
 	}
@@ -156,10 +126,11 @@ func toReader(paths ...string) (io.Reader, error) {
 }
 
 type playground struct {
-	cli     goplayground.Client
+	cli     *goplayground.Client
 	asJSON  bool
 	imports bool
 	open    bool
+	dldir   string
 	path    string
 }
 
@@ -171,12 +142,12 @@ func (p *playground) run(paths ...string) error {
 
 	r, err := p.cli.Run(src)
 	if err != nil {
-		return errors.Wrap(err, "run is failed")
+		return fmt.Errorf("run: %w", err)
 	}
 
 	if p.asJSON {
 		if err := json.NewEncoder(os.Stdout).Encode(r); err != nil {
-			return errors.Wrap(err, "result of run cannot encode as JSON")
+			return fmt.Errorf("result of run cannot encode as JSON: %w", err)
 		}
 		return nil
 	}
@@ -207,12 +178,12 @@ func (p *playground) format(paths ...string) error {
 
 	r, err := p.cli.Format(src, p.imports)
 	if err != nil {
-		return errors.Wrap(err, "format is failed")
+		return fmt.Errorf("format: %w", err)
 	}
 
 	if p.asJSON {
 		if err := json.NewEncoder(os.Stdout).Encode(r); err != nil {
-			return errors.Wrap(err, "result of format cannot encode as JSON")
+			return fmt.Errorf("result of format cannot encode as JSON: %w", err)
 		}
 		return nil
 	}
@@ -224,7 +195,7 @@ func (p *playground) format(paths ...string) error {
 
 	if p.path != "" {
 		if err := ioutil.WriteFile(p.path, []byte(r.Body), os.ModePerm); err != nil {
-			return errors.Wrap(err, "failed to write file")
+			return fmt.Errorf("failed to write file: %w", err)
 		}
 	}
 	fmt.Println(r.Body)
@@ -240,7 +211,13 @@ func (p *playground) share(paths ...string) error {
 
 	shareURL, err := p.cli.Share(src)
 	if err != nil {
-		return errors.Wrap(err, "share is failed")
+		return fmt.Errorf("share: %w", err)
+	}
+
+	if p.cli.Backend != goplayground.BackendDefault {
+		params := shareURL.Query()
+		params.Set("v", p.cli.Backend.String())
+		shareURL.RawQuery = params.Encode()
 	}
 
 	if p.open {
@@ -257,15 +234,108 @@ func (p *playground) share(paths ...string) error {
 func toHashOrURL(r io.Reader) (string, error) {
 	b, err := ioutil.ReadAll(r)
 	if err != nil {
-		return "", errors.Wrap(err, "cannot read hash or URL")
+		return "", fmt.Errorf("cannot read hash or URL: %w", err)
 	}
 	return strings.TrimSpace(string(b)), nil
 }
 
-func (p *playground) download(w io.Writer, hashOrURL string) error {
-	if err := p.cli.Download(w, hashOrURL); err != nil {
-		return errors.Wrap(err, "download is failed")
+func (p *playground) download(args []string) error {
+	var hashOrURL string
+	if len(args) <= 0 {
+		s, err := toHashOrURL(os.Stdin)
+		if err != nil {
+			return fmt.Errorf("download: %w", err)
+		}
+		hashOrURL = s
+	} else {
+		hashOrURL = args[0]
 	}
+
+	var buf bytes.Buffer
+	if err := p.cli.Download(&buf, hashOrURL); err != nil {
+		return fmt.Errorf("download: %w", err)
+	}
+
+	if p.dldir == "" {
+		if _, err := io.Copy(os.Stdout, &buf); err != nil {
+			return fmt.Errorf("download: %w", err)
+		}
+		return nil
+	}
+
+	data := buf.Bytes()
+	a := txtar.Parse(data)
+	if len(a.Files) == 0 {
+		fname := hashOrURL
+		dlURL, err := url.Parse(fname)
+		if err == nil { // hashOrURL is URL
+			fname = path.Base(dlURL.Path)
+			if !strings.HasSuffix(fname, ".go") {
+				fname += ".go"
+			}
+		}
+
+		f, err := os.Create(filepath.Join(p.dldir, fname))
+		if err != nil {
+			return fmt.Errorf("download: %w", err)
+		}
+
+		if _, err := io.Copy(f, bytes.NewReader(data)); err != nil {
+			return fmt.Errorf("download: %w", err)
+		}
+
+		if err := f.Close(); err != nil {
+			return fmt.Errorf("download: %w", err)
+		}
+
+		return nil
+	}
+
+	if v := bytes.TrimSpace(a.Comment); len(v) > 0 {
+		a.Files = append([]txtar.File{txtar.File{
+			Name: "prog.go",
+			Data: a.Comment,
+		}}, a.Files...)
+		a.Comment = nil
+	}
+
+	for _, f := range a.Files {
+		fpath := filepath.Join(p.dldir, filepath.FromSlash(f.Name))
+		fmt.Printf("output %s ... ", fpath)
+
+		if err := os.MkdirAll(filepath.Dir(fpath), 0o777); err != nil {
+			return fmt.Errorf("download: %w", err)
+		}
+
+		dst, err := os.Create(fpath)
+		if err != nil {
+			return fmt.Errorf("download: %w", err)
+		}
+
+		if _, err := io.Copy(dst, bytes.NewReader(f.Data)); err != nil {
+			return fmt.Errorf("download: %w", err)
+		}
+
+		if err := dst.Close(); err != nil {
+			return fmt.Errorf("download: %w", err)
+		}
+
+		fmt.Println("ok")
+	}
+
+	return nil
+}
+
+func (p *playground) version() error {
+	r, err := p.cli.Version()
+	if err != nil {
+		return fmt.Errorf("version: %w", err)
+	}
+
+	fmt.Println("Version:", r.Version)
+	fmt.Println("Release:", r.Release)
+	fmt.Println("Name:", r.Name)
+
 	return nil
 }
 

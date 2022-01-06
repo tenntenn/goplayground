@@ -6,13 +6,16 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"strings"
 )
 
 const (
-	// BaseURL is the default base URL of Go Playground.
+	// FrontBaseURL is frontend of the Go Playground.
+	FrontBaseURL = "https://go.dev/play"
+	// BaseURL is the default base URL of the Go Playground.
 	BaseURL = "https://play.golang.org"
-	// Go2GoBaseURL is the base URL of go2goplay.golang.org.
+	// Deprecated: Go2GoBaseURL is the base URL of go2goplay.golang.org.
 	Go2GoBaseURL = "https://go2goplay.golang.org"
 	// Version is version of using Go Playground.
 	Version = "2"
@@ -22,15 +25,37 @@ const (
 // If BaseURL is empty, Client uses default BaseURL.
 // HTTPClient can be set instead of http.DefaultClient.
 type Client struct {
-	BaseURL    string
-	HTTPClient HTTPClient
+	FrontBaseURL string
+	BaseURL      string
+	Backend      Backend
+	HTTPClient   HTTPClient
 }
 
 func (cli *Client) baseURL() string {
+	baseURL := BaseURL
 	if cli.BaseURL != "" {
-		return cli.BaseURL
+		baseURL = cli.BaseURL
 	}
-	return BaseURL
+
+	if cli.Backend != BackendGotip {
+		return baseURL
+	}
+
+	urlBase, err := url.Parse(baseURL)
+	if err != nil {
+		return baseURL
+	}
+
+	urlBase.Host = cli.Backend.String() + urlBase.Host
+
+	return urlBase.String()
+}
+
+func (cli *Client) frontBaseURL() string {
+	if cli.FrontBaseURL != "" {
+		return cli.FrontBaseURL
+	}
+	return FrontBaseURL
 }
 
 func (cli *Client) httpClient() HTTPClient {
