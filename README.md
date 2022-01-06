@@ -109,9 +109,9 @@ Name: Go dev branch
 ## With Go dev branch
 
 ```
-$ gp format -backend gotip example.go2
-$ gp run -backend gotip example.go2
-$ gp share -backend gotip example.go2
+$ gp format -backend gotip example.go
+$ gp run -backend gotip example.go
+$ gp share -backend gotip example.go
 $ gp download -backend gotip hYtdQPeKUC3
 ```
 
