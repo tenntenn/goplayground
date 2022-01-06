@@ -30,6 +30,10 @@ $ gp run a.go b.go
 $ find . -type f | xargs gp run
 ```
 
+```
+$ find . -type f -not -path '*/\.*' | xargs gp run
+```
+
 ### Format
 
 ```
@@ -48,6 +52,10 @@ $ gp format a.go b.go
 $ find . -type f | xargs gp format
 ```
 
+```
+$ find . -type f -not -path '*/\.*' | xargs gp format
+```
+
 ### Share
 
 ```
@@ -60,6 +68,10 @@ $ gp share a.go b.go
 
 ```
 $ find . -type f | xargs gp share
+```
+
+```
+$ find . -type f -not -path '*/\.*' | xargs gp share
 ```
 
 ### Download
