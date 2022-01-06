@@ -26,7 +26,7 @@ func (cli *Client) Share(src interface{}) (*url.URL, error) {
 		return nil, err
 	}
 
-	shareURL, err := url.Parse(cli.baseURL() + "/p/" + string(bs))
+	shareURL, err := url.Parse(cli.frontBaseURL() + "/p/" + string(bs))
 	if err != nil {
 		return nil, err
 	}
