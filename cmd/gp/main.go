@@ -34,6 +34,7 @@ func main() {
 		go2go, asJSON, imports, open bool
 		dldir                        string
 		backend                      goplayground.Backend
+		outputpath                   string
 	)
 	fset.BoolVar(&go2go, "go2", false, "Deprecated: use go2goplay.golang.org")
 	fset.BoolVar(&asJSON, "json", false, "output as JSON for run or format")
@@ -41,6 +42,7 @@ func main() {
 	fset.BoolVar(&open, "open", false, "open url in browser for share")
 	fset.StringVar(&dldir, "dldir", "", "output directory for download")
 	fset.Var(&backend, "backend", `go version: empty is release version and "gotip" is the developer branch`)
+	fset.StringVar(&outputpath, "output", "", "output file path for format")
 	fset.Parse(os.Args[2:])
 
 	p := &playground{
@@ -51,6 +53,7 @@ func main() {
 		imports: imports,
 		open:    open,
 		dldir:   dldir,
+		path:    outputpath,
 	}
 
 	if go2go {
@@ -128,6 +131,7 @@ type playground struct {
 	imports bool
 	open    bool
 	dldir   string
+	path    string
 }
 
 func (p *playground) run(paths ...string) error {
@@ -186,10 +190,15 @@ func (p *playground) format(paths ...string) error {
 
 	if r.Error != "" {
 		fmt.Fprintln(os.Stderr, r.Error)
-	} else {
-		fmt.Println(r.Body)
+		return nil
 	}
 
+	if p.path != "" {
+		if err := ioutil.WriteFile(p.path, []byte(r.Body), os.ModePerm); err != nil {
+			return fmt.Errorf("failed to write file: %w", err)
+		}
+	}
+	fmt.Println(r.Body)
 	return nil
 }
 

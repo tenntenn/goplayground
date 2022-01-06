@@ -7,7 +7,7 @@ This is a client of [Go Playground](https://play.golang.org).
 ### Install
 
 ```
-$ go get github.com/tenntenn/goplayground/cmd/gp
+$ go install github.com/tenntenn/goplayground/cmd/gp@latest
 ```
 
 ### Usage
@@ -33,7 +33,11 @@ $ find . -type f | xargs gp run
 ### Format
 
 ```
-$ gp fomrat [-imports] main.go
+$ gp format [-imports] main.go
+```
+
+```
+$ gp format [-imports] -output main.go main.go
 ```
 
 ```
@@ -83,4 +87,4 @@ $ gp download -go2 hYtdQPeKUC3
 
 ## Use as a libary
 
-See: https://godoc.org/github.com/tenntenn/goplayground
+See: https://pkg.go.dev/github.com/tenntenn/goplayground
