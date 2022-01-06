@@ -31,5 +31,11 @@ func (cli *Client) Share(src interface{}) (*url.URL, error) {
 		return nil, err
 	}
 
+	if cli.Backend != BackendDefault {
+		q := shareURL.Query()
+		q.Set("v", cli.Backend.String())
+		shareURL.RawQuery = q.Encode()
+	}
+
 	return shareURL, nil
 }

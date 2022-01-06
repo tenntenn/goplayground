@@ -1,6 +1,6 @@
 # Go Playground Client
 
-This is a client of [Go Playground](https://play.golang.org).
+This is a client of [The Go Playground](https://go.dev/play).
 
 ## Use as CLI
 
@@ -77,7 +77,7 @@ $ find . -type f -not -path '*/\.*' | xargs gp share
 ### Download
 
 ```
-$ gp download https://play.golang.org/p/sTkdodLtokQ
+$ gp download https://go.dev/play/p/sTkdodLtokQ
 ```
 
 ```
@@ -85,16 +85,16 @@ $ gp dl https://play.golang.org/p/sTkdodLtokQ
 ```
 
 ```
-$ gp dl -dldir=output https://play.golang.org/p/sTkdodLtokQ
+$ gp dl -dldir=output https://go.dev/play/p/sTkdodLtokQ
 ```
 
-## Try generics codes with go2goplay.golang.org
+## With Go dev branch
 
 ```
-$ gp format -go2 example.go2
-$ gp run -go2 example.go2
-$ gp share -go2 example.go2
-$ gp download -go2 hYtdQPeKUC3
+$ gp format -backend gotip example.go2
+$ gp run -backend gotip example.go2
+$ gp share -backend gotip example.go2
+$ gp download -backend gotip hYtdQPeKUC3
 ```
 
 ## Use as a libary
